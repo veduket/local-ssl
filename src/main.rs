@@ -41,6 +41,11 @@ enum Commands {
     Trust,
     /// Show CA status and expiry
     Status,
+    /// Check certificate validity for a domain (or "all")
+    Check {
+        /// Domain to check, or "all" for all certificates
+        domain: String,
+    },
     /// Manage anonymous usage telemetry
     Telemetry { #[command(subcommand)] action: TelemetryAction },
 }
@@ -75,6 +80,7 @@ fn execute(cli: Cli, tel: &telemetry::Telemetry) -> Result<String, String> {
         Commands::Generate { .. } => "generate",
         Commands::List => "list",
         Commands::Show { .. } => "show",
+        Commands::Check { .. } => "check",
         Commands::Trust => "trust",
         Commands::Status => "status",
     };
@@ -92,6 +98,7 @@ fn execute(cli: Cli, tel: &telemetry::Telemetry) -> Result<String, String> {
         Commands::Generate { domains, output } => cmd_generate(&store, &domains, output),
         Commands::List => cmd_list(&store),
         Commands::Show { domain } => cmd_show(&store, &domain),
+        Commands::Check { domain } => cmd_check(&store, &domain),
         Commands::Trust => cmd_trust(&store),
         Commands::Status => cmd_status(&store),
     }
@@ -228,6 +235,20 @@ fn cmd_list(store: &ca::CaStore) -> Result<String, String> {
         store.dir.join("certs").display().to_string().cyan()
     ));
     Ok(out)
+}
+
+fn cmd_check(store: &ca::CaStore, domain: &str) -> Result<String, String> {
+    if domain == "all" {
+        return cert::check_all_local(store);
+    }
+    // Try remote check if domain contains a colon (host:port)
+    if let Some((host, port_str)) = domain.split_once(':') {
+        if let Ok(port) = port_str.parse::<u16>() {
+            return cert::check_remote(host, port);
+        }
+    }
+    // Default: local check
+    cert::check_local(domain, store)
 }
 
 fn cmd_show(store: &ca::CaStore, domain: &str) -> Result<String, String> {
