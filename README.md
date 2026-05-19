@@ -76,6 +76,10 @@ sudo local-ssl list
 
 # Show certificate details
 sudo local-ssl show myapp.test
+
+# Check certificate validity or remote TLS
+sudo local-ssl check myapp.test
+sudo local-ssl check api.test:443   # Remote TLS inspection
 ```
 
 ### Manage Trust
@@ -84,8 +88,13 @@ sudo local-ssl show myapp.test
 # Reinstall CA into system trust store
 sudo local-ssl trust
 
-# Check CA status
+# Check CA and system trust status
 sudo local-ssl status
+
+# Manage telemetry
+sudo local-ssl telemetry status
+sudo local-ssl telemetry enable
+sudo local-ssl telemetry disable
 ```
 
 ### Integration with local-dns
@@ -153,10 +162,36 @@ sudo cp target/release/local-ssl /usr/local/bin/
 
 Requires Rust 1.75+.
 
+## Documentation
+
+| Guide | Audience | Contents |
+|-------|----------|---------|
+| [README](README.md) | Everyone | Quick start, feature overview |
+| [Admin Guide](ADMIN_GUIDE.md) | Sysadmins | Deployment, integration, troubleshooting |
+| [Developer Guide](DEVELOPER_GUIDE.md) | Contributors | Architecture, building, extending |
+| [Contributing](CONTRIBUTING.md) | Contributors | PR workflow, code style, testing |
+
+## Versioning
+
+This project follows [Semantic Versioning 2.0.0](https://semver.org/). Given a `MAJOR.MINOR.PATCH` version:
+- **MAJOR** — breaking changes to CLI commands, certificate storage format, or CA generation
+- **MINOR** — new features, commands, or platform integrations (backward-compatible)
+- **PATCH** — bug fixes, performance improvements, or documentation updates
+
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for our guidelines.
+
+Before submitting a PR, please:
+1. Ensure all tests pass: `cargo test`
+2. Verify the code compiles with no warnings: `cargo build`
+3. Run `cargo clippy` for linting
+4. Update documentation if adding or changing commands
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
 
 ---
 
-Made in Ethiopia with love by **Yared Getachew** and **OpenCode (Big Pickle)**.
+Made in Ethiopia with love by **Yared Getachew** and [OpenCode](https://opencode.ai) (Big Pickle).
