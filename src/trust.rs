@@ -1,4 +1,4 @@
-use std::io::Write;
+use colored::Colorize;
 use std::path::Path;
 use std::process::Command;
 
@@ -73,21 +73,8 @@ fn linux_install(cert_path: &Path) -> Result<(), String> {
         return Err("Unsupported Linux distro — install CA manually.".into());
     };
 
-    let mut child = Command::new("cp")
-        .arg("--")
-        .arg(dest)
-        .stdin(std::process::Stdio::piped())
-        .spawn()
-        .map_err(|e| format!("Cannot spawn cp: {e}"))?;
-
-    if let Some(ref mut stdin) = child.stdin {
-        stdin
-            .write_all(cert.as_bytes())
-            .map_err(|e| format!("Cannot write cert: {e}"))?;
-    }
-    child
-        .wait_with_output()
-        .map_err(|e| format!("cp failed: {e}"))?;
+    std::fs::write(dest, &cert).map_err(|e| format!("Cannot write CA cert to {dest}: {e}"))?;
+    println!("  {} Copied CA to {}", "✓".green(), dest.cyan());
 
     let update_cmds: &[&[&str]] = &[
         &["update-ca-certificates"],
@@ -97,14 +84,21 @@ fn linux_install(cert_path: &Path) -> Result<(), String> {
 
     for args in update_cmds {
         if which(args[0]) {
-            let out = Command::new(args[0]).args(&args[1..]).output();
-            if out.ok().map_or(false, |o| o.status.success()) {
+            let out = Command::new(args[0]).args(&args[1..]).output()
+                .map_err(|e| format!("Cannot run {}: {e}", args[0]))?;
+            if out.status.success() {
                 return Ok(());
+            } else {
+                let stderr = String::from_utf8_lossy(&out.stderr);
+                eprintln!("  {} {} failed, trying next...", "⚠".yellow(), args[0]);
+                if !stderr.is_empty() {
+                    eprintln!("    {}", stderr.trim());
+                }
             }
         }
     }
 
-    Err("CA cert copied but trust DB update failed — run manually.".into())
+    Err("CA cert copied but trust DB update failed — run manually:\n  sudo update-ca-certificates".into())
 }
 
 fn macos_install(cert_path: &Path) -> Result<(), String> {
