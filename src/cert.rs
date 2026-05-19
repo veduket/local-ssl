@@ -18,7 +18,6 @@ pub struct CertBundle {
 }
 
 struct ParsedCert {
-    domain: String,
     cn: String,
     not_before: ::time::OffsetDateTime,
     not_after: ::time::OffsetDateTime,
@@ -114,7 +113,6 @@ fn parse_local_cert(domain: &str, ca_store: &CaStore) -> Result<ParsedCert, Stri
         .to_string();
 
     Ok(ParsedCert {
-        domain: domain.to_string(),
         cn,
         not_before: parsed.validity().not_before.to_datetime(),
         not_after: parsed.validity().not_after.to_datetime(),
