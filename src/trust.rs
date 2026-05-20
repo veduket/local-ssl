@@ -13,49 +13,59 @@ pub fn install_ca(cert_path: &Path) -> Result<(), String> {
 }
 
 pub fn is_ca_trusted(cert_path: &Path) -> bool {
-    let cert_pem = match std::fs::read_to_string(cert_path) {
+    if cfg!(target_os = "macos") {
+        macos_trust_check(cert_path)
+    } else if cfg!(target_os = "linux") {
+        linux_trust_check(cert_path)
+    } else {
+        false
+    }
+}
+
+fn macos_trust_check(cert_path: &Path) -> bool {
+    let pem = match std::fs::read_to_string(cert_path) {
         Ok(c) => c,
         Err(_) => return false,
     };
-    let cn = cert_pem
-        .lines()
+    let cn = pem.lines()
         .find(|l| l.contains("CN="))
         .and_then(|l| l.split("CN=").nth(1))
         .map(|s| s.trim_end_matches('"'))
         .unwrap_or("unknown");
+    Command::new("security")
+        .args(["find-certificate", "-c", cn, "/Library/Keychains/System.keychain"])
+        .output()
+        .ok()
+        .map_or(false, |o| o.status.success())
+}
 
-    if cfg!(target_os = "macos") {
-        Command::new("security")
-            .args(["find-certificate", "-c", cn, "/Library/Keychains/System.keychain"])
-            .output()
-            .ok()
-            .map_or(false, |o| o.status.success())
-    } else if cfg!(target_os = "linux") {
-        let hash = Command::new("openssl")
-            .args(["x509", "-in", &cert_path.to_string_lossy(), "-hash", "-noout"])
-            .output()
-            .ok()
-            .and_then(|o| {
-                let h = String::from_utf8_lossy(&o.stdout).trim().to_string();
-                if h.is_empty() { None } else { Some(h) }
-            });
-        match hash {
-            Some(h) => {
-                let dirs = [
-                    "/usr/local/share/ca-certificates",
-                    "/etc/pki/ca-trust/source/anchors",
-                    "/usr/share/pki/trust/anchors",
-                ];
-                dirs.iter().any(|d| {
-                    Path::new(d).join(format!("{h}.0")).exists()
-                        || Path::new(d).join(format!("{h}.p11-kit")).exists()
-                })
-            }
-            None => false,
-        }
-    } else {
-        false
+fn linux_trust_check(cert_path: &Path) -> bool {
+    let our_pem = match std::fs::read_to_string(cert_path) {
+        Ok(c) => c,
+        Err(_) => return false,
+    };
+
+    let subject = our_pem.lines()
+        .find(|l| l.contains("Subject: "))
+        .unwrap_or("")
+        .to_string();
+    if subject.is_empty() {
+        return false;
     }
+
+    let bundles = [
+        "/etc/ssl/certs/ca-certificates.crt",
+        "/etc/pki/tls/certs/ca-bundle.crt",
+        "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem",
+        "/usr/share/pki/trust/trusted.pem",
+        "/etc/ssl/ca-bundle.pem",
+        "/etc/pki/tls/cacert.pem",
+    ];
+
+    bundles.iter().any(|b| {
+        std::fs::read_to_string(b).ok()
+            .map_or(false, |content| content.contains(&subject))
+    })
 }
 
 fn linux_install(cert_path: &Path) -> Result<(), String> {
