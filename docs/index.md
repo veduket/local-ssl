@@ -7,11 +7,12 @@ Locally-trusted HTTPS certificates for development. Generate a Certificate Autho
 ## Documentation
 
 | Document | Description |
-|---|---|
+|---|---|---|
 | [README](https://github.com/veduket/local-ssl/blob/main/README.md) | Overview, installation, quick start |
 | [ADMIN_GUIDE](https://github.com/veduket/local-ssl/blob/main/ADMIN_GUIDE.md) | CA lifecycle, expiry management, troubleshooting |
 | [DEVELOPER_GUIDE](https://github.com/veduket/local-ssl/blob/main/DEVELOPER_GUIDE.md) | Architecture, extending, cross-platform notes |
 | [CONTRIBUTING](https://github.com/veduket/local-ssl/blob/main/CONTRIBUTING.md) | How to contribute |
+| [TRUST_DETECTION](https://github.com/veduket/local-ssl/blob/main/docs/TRUST_DETECTION.md) | System trust detection strategies (A-D) with trade-offs |
 
 ## Quick reference
 
